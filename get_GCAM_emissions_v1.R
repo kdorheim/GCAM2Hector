@@ -11,6 +11,7 @@
 # 0. Set up & define helper functions ----------------------------------------------------------
 library(assertthat)
 library(data.table)
+library(dplyr)
 library(ggplot2)
 library(hector)
 #remotes::install_github("jgcri/hector@gcam-integrationv3", force = TRUE)
@@ -42,6 +43,7 @@ repeat_add_columns <- function(x, y){
   
 }
 
+theme_set(theme_bw())
 
 # 1. Import mapping file ---------------------------------------------------------------
 emissions_map <- as.data.table(read.csv(file.path(BASE_DIR, "GCAM_hector_emissions_map.csv")))
@@ -181,10 +183,8 @@ hector_comparison <- get_hector_comparison_data(dat_file)
 
 
 # 4. Run Hector with the GCAM set up & emissions! -----------------------------------------
-# these are the two emissions that are causing the problems! FML "HFC23_emissions" "HFC32_emissions"
-
-
-use_gcam_emissions<- function(ini_path, emissions_df, out_vars = c(GLOBAL_TAS(), RF_TOTAL(), CONCENTRATIONS_CO2())){
+use_gcam_emissions <- function(ini_path, emissions_df, 
+                              out_vars = c(GLOBAL_TAS(), RF_TOTAL(), CONCENTRATIONS_CO2())){
   
   # There should only be one scenario per emissions data frame. 
   assert_that(length(unique(emissions_df$scenario)) == 1)
@@ -215,7 +215,7 @@ use_gcam_emissions<- function(ini_path, emissions_df, out_vars = c(GLOBAL_TAS(),
   # why the fuck is this still not running??? 
   reset(hc)
   run(hc, runtodate = 2050)
-  out <- fetchvars(core = hc, dates = 1750:2050, vars = out_vars)
+  out <- fetchvars(core = hc, dates = 1900:2050, vars = out_vars)
   return(out)
 
   }
@@ -226,34 +226,31 @@ hector_gcam_driven <- use_gcam_emissions(ini_path = "~/projects/GCAM/gcam-core/i
 
 
 
-rbindlist(list(hector_comparison %>%  
-        filter(variable == GLOBAL_TAS()) %>% 
-        mutate(source = "GCAM"),
-      hector_gcam_driven %>% 
-        filter(variable == GLOBAL_TAS()) %>% 
-        mutate(source = "GCAM driven")), fill = TRUE) %>% 
-  ggplot(aes(year, value, color = source)) + 
-  geom_line() + 
-  labs(title = "TAS")
+
+# 5. Compare Hector & GCAM results! -----------------------------------------
 
 
-rbindlist(list(hector_comparison %>%  
-                 filter(variable == RF_TOTAL()) %>% 
-                 mutate(source = "GCAM"),
-               hector_gcam_driven %>% 
-                 filter(variable == RF_TOTAL()) %>% 
-                 mutate(source = "GCAM driven")), fill = TRUE) %>% 
-  ggplot(aes(year, value, color = source)) + 
-  geom_line() + 
-  labs(title = "RF total")
-rbindlist(list(hector_comparison %>%  
-                 filter(variable == CONCENTRATIONS_CO2()) %>% 
-                 mutate(source = "GCAM"),
-               hector_gcam_driven %>% 
-                 filter(variable == CONCENTRATIONS_CO2()) %>% 
-                 mutate(source = "GCAM driven")), fill = TRUE) %>% 
-  ggplot(aes(year, value, color = source)) + 
-  geom_line() + 
-  labs(title = "Co2 concc")
+read.csv("~/projects/GCAM/gcam-core/exe/logs/gcam-hector-outputstream.csv", skip = 1) %>% 
+  filter(spinup == 0) %>% 
+  filter(variable %in% c(GLOBAL_TAS(), CONCENTRATIONS_CO2(), RF_TOTAL())) -> 
+  gcamhector_outputstream
 
+
+hector_comparison %>% 
+  mutate(source =  "GCAM") %>% 
+  mutate(value = if_else(variable == CONCENTRATIONS_CO2(), value / 2.130234, value)) -> 
+  hector_comparison
+hector_comparison$source  <- "GCAM" 
+hector_gcam_driven$source <- "GCAM driven"
+gcamhector_outputstream$source <- "gcacm hector outputstream"
+
+comparison_results <- rbindlist(list(gcamhector_outputstream, hector_gcam_driven, hector_comparison), fill = TRUE) %>% 
+  mutate(year = as.integer(year)) %>% 
+  filter(year <= 2100 & year >= 1900) 
+
+comparison_results %>% 
+  ggplot(aes(year, value, color = source, linetype = source)) + 
+  geom_line(size = 1) + 
+  facet_wrap("variable", scales = "free") + 
+  theme(legend.position = "bottom")
 
