@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<queries>
+  <aQuery>
+
+    <all-regions/>
+    <ClimateQuery title="CO2 concentrations">
+      <axis1 name="CO2-concentration">none</axis1>
+      <axis2 name="Year">CO2-concentration[@year]</axis2>
+      <xPath buildList="true" dataName="CO2-concentration" group="false" sumAll="false">climate-model/CO2-concentration/text()</xPath>
+      <comments/>
+    </ClimateQuery> 
+  </aQuery>
+
+   <aQuery>
+     <all-regions/>
+     <ClimateQuery title="Climate forcing">
+       <axis1 name="forcing-total">none</axis1>
+       <axis2 name="Year">forcing-total[@year]</axis2>
+       <xPath buildList="true" dataName="forcing-total" group="false" sumAll="false">climate-model/forcing-total/text()</xPath>
+       <comments/>
+     </ClimateQuery> 
+   </aQuery>
+
+   <aQuery>
+     <all-regions/>
+     <ClimateQuery title="Global mean temperature">
+       <axis1 name="temperature">none</axis1>
+       <axis2 name="Year">global-mean-temperature[@year]</axis2>
+       <xPath buildList="true" dataName="global-mean-temperature" group="false" sumAll="false">climate-model/global-mean-temperature/text()</xPath>
+       <comments/>
+     </ClimateQuery>
+     </aQuery>
+      
+      <aQuery>
+    <all-regions/>
+         <gdpQueryBuilder title="CO2 emissions by region">
+            <axis1 name="region">region</axis1>
+            <axis2 name="Year">emissions</axis2>
+            <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:)]//CO2/emissions/node()</xPath>
+            <comments/>
+         </gdpQueryBuilder>
+      </aQuery>
+      
+      <aQuery>
+    <all-regions/>
+    <emissionsQueryBuilder title="nonCO2 emissions by region">
+        <axis1 name="GHG">GHG</axis1>
+        <axis2 name="Year">emissions</axis2>
+        <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:) or @type = 'resource' (:collapse:)](: / *[@type = 'subresource' (: collapse :)] :)//
+    *[@type = 'GHG']/emissions/node()</xPath>
+        <comments/>
+    </emissionsQueryBuilder>
+      </aQuery>
+      
+</queries>
+   
