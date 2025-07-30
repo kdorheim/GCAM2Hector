@@ -1,72 +1,204 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <queries>
-  <aQuery>
-
-    <all-regions/>
-    <ClimateQuery title="CO2 concentrations">
-      <axis1 name="CO2-concentration">none</axis1>
-      <axis2 name="Year">CO2-concentration[@year]</axis2>
-      <xPath buildList="true" dataName="CO2-concentration" group="false" sumAll="false">climate-model/CO2-concentration/text()</xPath>
-      <comments/>
-    </ClimateQuery>
-  </aQuery>
-
-   <aQuery>
-     <all-regions/>
-     <ClimateQuery title="Climate forcing">
-       <axis1 name="forcing-total">none</axis1>
-       <axis2 name="Year">forcing-total[@year]</axis2>
-       <xPath buildList="true" dataName="forcing-total" group="false" sumAll="false">climate-model/forcing-total/text()</xPath>
-       <comments/>
-     </ClimateQuery>
-   </aQuery>
-
-   <aQuery>
-       <ClimateQuery title="global mean temperature">
-           <axis1 name="temperature">none</axis1>
-           <axis2 name="Year">global-mean-surface-temperature[@year]</axis2>
-           <xPath buildList="true" dataName="global-mean-temperature" group="false" sumAll="false">climate-model/global-mean-surface-temperature/text()</xPath>
-           <comments>Returns global mean surface temp anomaly relative to the 1850-1900 mean.
-    Also available is global mean air temperature; in both climate model native or relative to 1850-1900 mean.
-    A user can adjust the query to search for any of:
-    * global-mean-surface-temperature
-    * global-mean-air-temperature
-    * global-mean-surface-temperature-native
-    * global-mean-air-temperature-native</comments>
-        </ClimateQuery>
-   </aQuery>
-
     <aQuery>
-    <all-regions/>
-         <gdpQueryBuilder title="CO2 emissions by region">
+        
+        <all-regions/>
+        <ClimateQuery title="CO2 concentrations">
+            <axis1 name="CO2-concentration">none</axis1>
+            <axis2 name="Year">CO2-concentration[@year]</axis2>
+            <xPath buildList="true" dataName="CO2-concentration" group="false" sumAll="false">climate-model/CO2-concentration/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="ACI RF">
+            <axis1 name="forcing-aci">none</axis1>
+            <axis2 name="Year">forcing-aci[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-aci" group="false" sumAll="false">climate-model/forcing-aci/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="Montreal RF">
+            <axis1 name="forcing-Montreal">none</axis1>
+            <axis2 name="Year">forcing-Montreal[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-Montreal" group="false" sumAll="false">climate-model/forcing-Montreal/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="OC RF">
+            <axis1 name="forcing-OC">none</axis1>
+            <axis2 name="Year">forcing-OC[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-OC" group="false" sumAll="false">climate-model/forcing-OC/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="longlivedFgas RF">
+            <axis1 name="forcing-longlivedFgas">none</axis1>
+            <axis2 name="Year">forcing-longlivedFgas[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-longlivedFgas" group="false" sumAll="false">climate-model/forcing-longlivedFgas/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="StratH2O RF">
+            <axis1 name="forcing-StratH2O">none</axis1>
+            <axis2 name="Year">forcing-StratH2O[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-StratH2O" group="false" sumAll="false">climate-model/forcing-StratH2O/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="TropO3 RF">
+            <axis1 name="forcing-TropO3">none</axis1>
+            <axis2 name="Year">forcing-TropO3[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-TropO3" group="false" sumAll="false">climate-model/forcing-TropO3/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="BC RF">
+            <axis1 name="forcing-BC">none</axis1>
+            <axis2 name="Year">forcing-BC[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-BC" group="false" sumAll="false">climate-model/forcing-BC/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="SO2 RF">
+            <axis1 name="forcing-SO2">none</axis1>
+            <axis2 name="Year">forcing-SO2[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-SO2" group="false" sumAll="false">climate-model/forcing-SO2/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="NH3 RF">
+            <axis1 name="forcing-NH3">none</axis1>
+            <axis2 name="Year">forcing-NH3[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-NH3" group="false" sumAll="false">climate-model/forcing-NH3/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="PFCs RF">
+            <axis1 name="forcing-PFCs">none</axis1>
+            <axis2 name="Year">forcing-PFCs[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-PFCs" group="false" sumAll="false">climate-model/forcing-PFCs/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="N2O RF">
+            <axis1 name="forcing-N2O">none</axis1>
+            <axis2 name="Year">forcing-N2O[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-N2O" group="false" sumAll="false">climate-model/forcing-N2O/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="CH4 RF">
+            <axis1 name="forcing-CH4">none</axis1>
+            <axis2 name="Year">forcing-CH4[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-CH4" group="false" sumAll="false">climate-model/forcing-CH4/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="CO2 RF">
+            <axis1 name="forcing-CO2">none</axis1>
+            <axis2 name="Year">forcing-CO2[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-CO2" group="false" sumAll="false">climate-model/forcing-CO2/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="Climate forcing">
+            <axis1 name="forcing-total">none</axis1>
+            <axis2 name="Year">forcing-total[@year]</axis2>
+            <xPath buildList="true" dataName="forcing-total" group="false" sumAll="false">climate-model/forcing-total/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <ClimateQuery title="global mean temperature">
+            <axis1 name="temperature">none</axis1>
+            <axis2 name="Year">global-mean-surface-temperature[@year]</axis2>
+            <xPath buildList="true" dataName="global-mean-temperature" group="false" sumAll="false">climate-model/global-mean-surface-temperature/text()</xPath>
+            <comments>Returns global mean surface temp anomaly relative to the 1850-1900 mean.
+                Also available is global mean air temperature; in both climate model native or relative to 1850-1900 mean.
+                A user can adjust the query to search for any of:
+                * global-mean-surface-temperature
+                * global-mean-air-temperature
+                * global-mean-surface-temperature-native
+                * global-mean-air-temperature-native</comments>
+        </ClimateQuery>
+    </aQuery>
+    
+    <aQuery>
+        <all-regions/>
+        <gdpQueryBuilder title="CO2 emissions by region">
             <axis1 name="region">region</axis1>
             <axis2 name="Year">emissions</axis2>
             <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:)]//CO2/emissions/node()</xPath>
             <comments/>
-         </gdpQueryBuilder>
-      </aQuery>
-
+        </gdpQueryBuilder>
+    </aQuery>
+    
     <aQuery>
-    <all-regions/>
-    <emissionsQueryBuilder title="nonCO2 emissions by region">
-        <axis1 name="GHG">GHG</axis1>
-        <axis2 name="Year">emissions</axis2>
-        <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:) or @type = 'resource' (:collapse:)](: / *[@type = 'subresource' (: collapse :)] :)//
-    *[@type = 'GHG']/emissions/node()</xPath>
-        <comments/>
-    </emissionsQueryBuilder>
-      </aQuery>
-
+        <all-regions/>
+        <emissionsQueryBuilder title="nonCO2 emissions by region">
+            <axis1 name="GHG">GHG</axis1>
+            <axis2 name="Year">emissions</axis2>
+            <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:) or @type = 'resource' (:collapse:)](: / *[@type = 'subresource' (: collapse :)] :)//
+                *[@type = 'GHG']/emissions/node()</xPath>
+            <comments/>
+        </emissionsQueryBuilder>
+    </aQuery>
+    
     <aQuery>
         <all-regions/>
         <query title="LUC_emissions">
-                <axis1 name="region">region</axis1>
-                <axis2 name="Year">land-use-change-emission[@year]</axis2>
-                <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name='root' or @type='LandNode' (:collapse:)]//
-                    LandLeaf[true() or @type='LandLeaf' (: collapse :)]/land-carbon-densities/
+            <axis1 name="region">region</axis1>
+            <axis2 name="Year">land-use-change-emission[@year]</axis2>
+            <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name='root' or @type='LandNode' (:collapse:)]//
+                LandLeaf[true() or @type='LandLeaf' (: collapse :)]/land-carbon-densities/
                 land-use-change-emission[@year&gt;1970]/text()</xPath>
-                <comments/>
-            </query>
+            <comments/>
+        </query>
     </aQuery>
 </queries>
 
