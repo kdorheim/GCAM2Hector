@@ -4,3 +4,5 @@
 .Ruserdata
 
 GCAM2Hector.Rproj
+gcam_output/**
+.DS_Store
