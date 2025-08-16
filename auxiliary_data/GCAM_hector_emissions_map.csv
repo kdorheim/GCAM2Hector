@@ -45,3 +45,6 @@ OC_AWB,OC,1.00E+00,OC_emissions,Tg
 NH3,NH3,1.00E+00,NH3_emissions,Tg
 NH3_AGR,NH3,1.00E+00,NH3_emissions,Tg
 NH3_AWB,NH3,1.00E+00,NH3_emissions,Tg
+luc_emissions,luc_emissions,1.00E-03,luc_emissions,Pg C/yr
+luc_uptake,luc_uptake,1.00E-03,luc_uptake,Pg C/yr
+daccs_uptake,daccs_uptake,1.00E-03,daccs_uptake,Pg C/yr
