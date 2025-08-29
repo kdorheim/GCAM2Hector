@@ -362,7 +362,15 @@ internal_fxn_co2_emissions <- function(prjdata, gcam_emiss_file = GCAM_EMISS_FIL
 }
 
 
-
+# Extract and format emissions for Hector from a GCAM data base.
+# Args
+#   db_dir: str directory where the GCAM database to be processed lives
+#   db_name: str name of the GCAM XML db
+#   query_file: str to the query file to run, default is set to internal data
+#   prj_file: str name where to save the rgcam project data at, if NULL will save to a temporary location
+#   gcam_emiss_file: str path to the hector gcam emissions csv table, default is set to internal data
+#   gcam_default_file: str path to the hector default emissions csv table, default is set to internal data
+# Returns: data frame of Hector inputs
 get_hector_emiss <- function(db_dir, db_name,
                               query_file = QUERY_FILE,
                               prj_file = NULL,
@@ -404,3 +412,78 @@ get_hector_emiss <- function(db_dir, db_name,
 
 }
 
+
+# Complete a single Hector run using the input data frame returned by get_hector_emiss
+# Args
+#   hc: active hector core (should be configured with the same ini file used in the gcam run)
+#   inputs: data frame of Hector emissions returned by get_hector_emiss
+# Returns: data frame of Hector results
+run_single_scn <- function(hc, inputs){
+
+    # Make sure that there is only input scenario.
+    scn <- unique(inputs$scenario)
+    stopifnot(length(scn) == 1)
+
+    # Set the input variables for the Hector run.
+    split(inputs, inputs$variable) %>%
+        sapply(function(df){
+
+            var <- unique(df$variable)
+            units <- getunits(var)
+            setvar(hc, dates = df$year, values = df$value, var = var, unit = units)
+            reset(hc)
+        })
+
+    run(hc, runtodate = 2100)
+
+    VARS <- c("CO2_concentration", "RF_aci", "RF_OC", "RF_H2O_strat",
+              "RF_O3_trop", "RF_BC", "RF_SO2", "RF_NH3", "RF_N2O", "FCH4",
+              "RF_CO2", "RF_tot", "gmst")
+
+    fetchvars(hc, dates = 1750:2100, vars = VARS) %>%
+        mutate(scenario = scn,
+               source = "hector") ->
+        out
+
+    return(out)
+}
+
+
+# Run stand alone Hector with emisisons for all the scenarios included in
+# the GCAM xml data base.
+# Args
+#   hc: active hector core (should be configured with the same ini file used in the gcam run)
+#   db_dir: str directory where the GCAM database to be processed lives
+#   db_name: str name of the GCAM XML db
+#   prj_file: str name where to save the rgcam project data at, if NULL will save to a temporary location
+#   gcam_emiss_file: str path to the hector gcam emissions csv table, default is set to internal data
+#   gcam_default_file: str path to the hector default emissions csv table, default is set to internal data
+# Returns: data frame of Hector results
+run_gcamHector <- function(hc, db_dir,
+                           db_name,
+                           prj_file = NULL,
+                           query_file = QUERY_FILE,
+                           gcam_emiss_file = GCAM_EMISS_FILE,
+                           gcam_default_file = DEFAULT_EMISS_FILE){
+
+    # Check to make sure that the hc is active
+    stopifnot(class(hc)[1] == "hcore")
+    stopifnot(isactive(hc))
+
+    # Prep the emissions for Hector
+    inputs <- get_hector_emiss(db_dir,
+                               db_name,
+                               query_file,
+                               prj_file = prj_file)
+
+    # Feed the inputs into Hector and get results.
+    split(inputs, inputs$scenario) %>%
+        sapply(run_single_scn, hc = hc, simplify = FALSE, USE.NAMES = FALSE) %>%
+        do.call(what = "rbind") ->
+        hector_out
+
+    rownames(hector_out) <- NULL
+
+    return(hector_out)
+
+}
