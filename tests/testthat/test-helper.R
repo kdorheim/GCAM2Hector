@@ -26,3 +26,14 @@ test_that("repeat_for_scns works", {
     expect_error(req_check(x = names(mtcars), req = "scenario"))
 
 })
+
+test_that("read_hector_csv works", {
+
+    hector_file <- system.file(package = "hector", "input/tables/ssp245_emiss-constraints_rf.csv")
+    out <- read_hector_csv(hector_file)
+
+    expect_true(is.data.frame(out))
+    expect_true(req_check(names(out), req = c("year", "variable", "units")))
+
+})
+

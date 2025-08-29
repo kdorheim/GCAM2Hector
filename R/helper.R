@@ -15,7 +15,6 @@ req_check <- function(x, req){
     return(TRUE)
 }
 
-
 #' Replicate data over scenarios
 #'
 #' This is used to replicate default of preGCAM emissions which are needed
@@ -47,7 +46,36 @@ repeat_for_scns <- function(x, scns){
 
 }
 
+#' Read in a Hector input csv table with a nice format
+#'
+#'
+#' @param file character vectors, containing the path name to the hector input csv file.
+#' @return data frame of Hector inputs
+#' @noRd
+read_hector_csv <- function(file){
 
+    wide_df <- read.csv(file, comment.char = ";")
+
+    long_df <- reshape(wide_df,
+                       varying = names(wide_df)[-1], # Select all columns except 'Date'
+                       v.names = "Value",           # Name for the new value column
+                       timevar = "Variable",        # Name for the new variable column
+                       times = names(wide_df)[-1],  # Names of variables to appear in the 'Variable' column
+                       idvar = "Date",              # Identifier column
+                       direction = "long")
+
+    # Clean up the data frame
+    rownames(long_df) <- NULL
+    colnames(long_df) <- c("year", "variable", "value")
+
+    # TODO this suppress warning can be dropped when upgraded >= hector v3.5
+    suppressWarnings({
+        long_df$units <- hector::getunits(long_df$variable)
+    })
+
+    return(long_df)
+
+}
 
 
 
