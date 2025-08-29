@@ -4,3 +4,4 @@
 ^\.Rproj\.user$
 .DS_Store
 ^data-raw$
+^gcam_output$
