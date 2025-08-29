@@ -1,3 +1,4 @@
+source("scripts/env.R")
 
 # data.table implementation of the gcamdata repeat_add_columns
 # Args
@@ -20,152 +21,386 @@ repeat_add_columns <- function(x, y){
 
 }
 
-
-# Transform a rgcam project file into a data frame with emissions in Hector appropriate units and names.
+# replicate a data frame for n number of scenarios
 # Args
-#   dat_file: file path to the .dat file created by rgcam
-# Return: Hector input emissions for all the GCAM generated emission species for all the scenarios
-# listed in the dat_file. The returned data frame is set up to be used with some sort of hector::setvars
-# function
-get_hector_emissions <- function(dat_file){
+#   x: data frame containing information that needs to be replicated for some number of scenarios
+#   scns: vector of the scenarios
+# Returns: data frame x replicated n times with a scenario column
+repeat_for_scns <- function(x, scns){
 
-    # Load the GCAM project.
-    assert_that(file.exists(dat_file))
-    gcam_rslts <- loadProject(dat_file)
+    stopifnot(!"scenario" %in% names(x))
 
-    # Get the GCAM emission results for the non CO2 emissions.
-    names(gcam_rslts) %>%
-        lapply(function(x){
-            gcam_rslts[[x]]$`nonCO2 emissions by region`
-        }) %>%
-        rbindlist ->
-        nonCO2_emissions
+    x %>%
+        sapply(rep.int, times=length(scns))  %>%
+        as.data.frame() %>%
+        mutate(scenario = rep(scns, each = nrow(.)/length(scns))) %>%
+        mutate(value = as.numeric(value), year = as.numeric(year)) ->
+        out
 
-    # Get the FFI CO2 emissions
-    names(gcam_rslts) %>%
-        lapply(function(x){
-            gcam_rslts[[x]]$`CO2 emissions by region`
-        }) %>%
-        rbindlist %>%
-        # TODO need to check to see if this is the correct
-        # way to handle this!
-        mutate(ghg = if_else(value < 0, "daccs_uptake", ghg)) %>%
-        mutate(value = abs(value)) ->
-        ffi_emissions
+    return(out)
 
+}
 
-    # Since the LUC emissions are treated differently extract them here.
-    names(gcam_rslts) %>%
-        lapply(function(x){
+# Helper function that reads in a hector CSV table into a nice format
+# Args:
+#   file: path the to a hector input emissions table
+# Return: long data.frame of hector inputs (emissions, constraints, rf)
+read_hector_csv <- function(file){
 
-            gcam_rslts[[x]]$LUC_emissions %>%
-                mutate(ghg = "luc_emissions")
+    wide_df <- read.csv(file, comment.char = ";")
+    long_df <- tidyr::pivot_longer(wide_df, -Date)
+    names(long_df) <- c("year", "variable", "value")
+    long_df$units <- hector::getunits(long_df$variable)
 
-        }) %>%
-        rbindlist %>%
-        # If there are any negative values change them to LUC Uptake.
-        mutate(ghg = if_else(value < 0, "luc_uptake", ghg)) %>%
-        mutate(value = abs(value)) ->
-        luc_emissions
+    return(long_df)
+}
 
-    # Combine all of the emissions into a single data frame!
-    gcam_df <- bind_rows(nonCO2_emissions, ffi_emissions, luc_emissions)
+# Get the historical emissions used to drive Hector before GCAM emissions
+# are supplied to the Hector core.
+# Args
+#   file: path to the gcam emissions file, default is the data included in the auxiliary data
+# Returns: data.frame of the emissions used to drive Hector's historical period
+get_pregcam_emiss <- function(file = GCAM_EMISS_FILE){
 
-    # Add the mapping information to the data frame
-    gcam_emissions_map <- emissions_map[gcam_df, on = "ghg"]
+    emiss <- read_hector_csv(file)
 
-    # Check to make sure that the un-mapped emissions are the ones we are expecting.
-    no_matches <- unique(gcam_emissions_map[is.na(gcam_emissions_map$agg.gas), ]$ghg)
-    expected_emissions <- c("H2", "H2_AWB", "PM10", "PM2.5", "CO2_FUG")
-    assert_that(all(no_matches %in% expected_emissions), msg = "unexpected emission not being passed to Hector")
+    # There should be no emissions greater than the transition date.
+    stopifnot(all(emiss$year <= TRANSITION_DATE))
 
-    # First convert from GCAM units to Hector units, this is important for some of the halocarbons, multiple GCAM
-    # halocarbons may be aggregated into one Hector halocarbon category.
-    gcam_emissions_map$converted_value <- gcam_emissions_map[ , list(value * unit.conv)]
-    gcam_inputs_for_hector <- gcam_emissions_map[ , list(value = sum(converted_value)), by = c("agg.gas", "hector.name", "scenario", "year",  "hector.units")]
-
-    # Drop the exepcted NAs
-    d <- na.omit(gcam_inputs_for_hector)
-
-    # error checking
-    req_cols <- c("year", "value")
-    assert_that(all(req_cols %in% names(d)))
-
-
-    # The expected years of data we want are from 2005 until 2100, before the year
-    # 2005 Hector is using the GCAM inputs
-    expected_years <- data.table(year = 2005:2100)
-
-    # Construct a df of all the variables for all the 2005 until 2100. This will
-    # create a df with NA values when no GCAM emissions are available that will be
-    # fill in the next step.
-    save_cols <- names(d)[!names(d) %in% c("year", "value")]
-    to_replicate <- distinct(d[, ..save_cols])
-    df_with_all_yrs <- repeat_add_columns(x = to_replicate, y = expected_years)
-    df_NA <- d[df_with_all_yrs,  on=names(df_with_all_yrs), nomatch = NA]
-
-    # Replace the NA emissions with linearly interpolated values.
-    split(x = df_NA,
-          f = interaction(df_NA$hector.name, df_NA$scenario, df_NA$hector.units, drop = TRUE)) %>%
-        lapply(function(X){
-            new_vals <- na.approx(object = X$value, x = X$year)
-            X$value <- new_vals
-            return(X)
-        }) %>%
-        rbindlist ->
-        complete_hetor_emissions
-
-
-    # Finally format the data
-    out <- complete_hetor_emissions[, .(scenario,variable = hector.name, year, value, units = hector.units)]
-
-
-
-
-    # Make sure that there are no missing emissions! Otherwise throw an error here!
-    req_names <- c("ffi_emissions", "luc_emissions", "daccs_uptake", "luc_uptake", "BC_emissions",
-                   "C2F6_emissions", "CF4_emissions", "CH4_emissions", "CO_emissions", "HFC125_emissions",
-                   "HFC134a_emissions", "HFC143a_emissions", "HFC227ea_emissions", "HFC23_emissions",
-                   "HFC245fa_emissions", "HFC32_emissions", "N2O_emissions", "NH3_emissions",
-                   "NMVOC_emissions", "NOX_emissions", "OC_emissions", "SF6_emissions", "SO2_emissions")
-    missing <- setdiff(req_names, out$variable)
+    # Make sure that all the required emissions are present!
+    missing <- setdiff(emiss$variable, GCAM_EMISS)
     stopifnot(length(missing) == 0)
 
+    return(emiss)
+}
+
+# Get the default emissions used regardless of GCAM scenario.
+# Args
+#   file: path to the default emissions file, default is the data included in the auxiliary data
+# Returns: data.frame of the emissions used to drive Hector's historical period
+get_default_emiss <- function(file = DEFAULT_EMISS_FILE){
+
+    emiss <- read_hector_csv(file)
+
+    # There should be emissions up until th year 2100
+    stopifnot(max(emiss$year) >= 2100)
+
+    # Make sure that all the required emissions are present!
+    missing <- setdiff(emiss$variable, DEFAULT_EMISS)
+    stopifnot(length(missing) == 0)
+
+    return(emiss)
+}
+
+# Run all the queries on a GCAM xml db
+# Args
+#   db_dir: path to xml db
+#   db_name: db name
+#   query_file: path to xml of the hector queries to run
+#   prj_file: path to the .dat file that contiains query results, if NULL the .dat file will be saved in a temp directory
+run_all_queries <- function(db_dir, db_name, query_file, prj_file = NULL){
+
+    stopifnot(dir.exists(file.path(db_dir, db_name)))
+    if(is.null(prj_file)){
+        prj_file <- file.path(tempdir(), 'gcam_db.dat')
+    }
+
+    if(!file.exists(prj_file)){
+
+        message("Querying GCAM XML DB, this may take a moement.")
+        conn <- localDBConn(db_dir, db_name)
+
+        listScenariosInDB(conn)$name %>%
+            lapply(function(name){
+                gcam_data <- addScenario(conn = conn,
+                                         proj = prj_file,
+                                         scenario = name,
+                                         queryFile = query_file)
+                return(invisible())
+            })
+
+    }
+
+    return(prj_file)
+}
+
+# Get comparison data from the GCAM xml db
+# Args
+#   prj_file: path to the .dat file of extracted GCAM xml db, created by run_all_queries
+# Return: data.frame of gcam results
+get_GCAM_hector_comparison_data <- function(prj_file){
+
+    stopifnot(file.exists(prj_file))
+    prjdata <- rgcam::loadProject(prj_file)
+
+    queries <- c("CO2_concentration", "RF_aci", "RF_OC", "RF_H2O_strat",
+                 "RF_O3_trop", "RF_BC", "RF_SO2", "RF_NH3", "RF_N2O", "FCH4",
+                 "RF_CO2", "RF_tot", "gmst")
+
+    lapply(X = queries, function(X){
+        out <- getQuery(prjdata, query = X)
+        out$variable <- X
+        return(out)
+    }) ->
+        query_list
+
+    out <- do.call(what = "rbind", args = query_list)
+    names(out) <- tolower(names(out))
+    out$source <- "gcam xmldb"
+
+    out %>%
+        filter(year > 1975) ->
+        out
+
+
+    return(out)
+
+}
+
+# Internal function used by add_missing_years which will interpolate
+# missing emissions
+# Args
+#   df: data frame for a single variable
+#   req_years: vector of the years needed in this df.
+# Returns: data frame with no NAs with values for all the required years
+internal_fxn_missing_yrs <- function(df, req_years){
+
+    df %>%
+        select(variable, units, scenario) %>%
+        distinct ->
+        meta_data
+
+    miss_years <- setdiff(req_years, df$year)
+
+    data.frame(year = miss_years,
+               value = NA) %>%
+        cbind(meta_data) ->
+        missing_yrs_df
+
+    df %>%
+        dplyr::bind_rows(missing_yrs_df) %>%
+        arrange(year) %>%
+        mutate(value = na.approx(value)) ->
+        complete_df
+
+    return(complete_df)
+
+}
+
+# Use linear interpolation to get annual emissions
+# Args
+#   df: data frame of emissions from GCAM (only includes results every 5 years)
+#   yrs: vector of the years needed in this df.
+# Returns: data frame with no NAs with values for all the required years
+add_missing_years <- function(df, yrs){
+
+    # Make sure we are working with the right data
+    req_cols <- c("year", "value", "variable", "units", "scenario")
+    missing <- setdiff(req_cols, names(df))
+    stopifnot(length(missing) == 0)
+
+
+    # Use linear interpolation to fill in the
+    split(df, interaction(df$variable, df$scenario)) %>%
+        lapply(internal_fxn_missing_yrs, req_years = yrs) %>%
+        do.call(what = "rbind") ->
+        out
+
+    return(out)
+
+}
+
+
+# Get the the non CO2 emissions for Hector from a GCAM output database
+# Args
+#   prjdata: path to the GCAM output file
+#   gcam_emiss_file: path to the gcam emissions table
+# Returns: data frame of the non CO2 emissions for Hector
+internal_fxn_nonCO2_emissions <- function(prjdata, gcam_emiss_file = GCAM_EMISS_FILE){
+
+    # The query to run
+    queries <- c("nonCO2 emissions by region")
+
+    # Extract the relevant query.
+    lapply(X = queries, function(X){
+        out <- getQuery(prjdata, query = X)
+        out$variable <- X
+        return(out)
+    })  %>%
+        do.call(what = "rbind") %>%
+        # There should be no CO2 emissions in this query...
+        # TODO need to check to see if there is a porblem with this query
+        filter(!ghg %in% c("CO2", "CO2_FUG")) %>%
+        # Map the GCAM emissions to Hector variable names and
+        # convert to Hector units.
+        left_join(EMISS_MAP, by = join_by(ghg)) %>%
+        mutate(value = value * unit.conv) %>%
+        dplyr::summarise(value = sum(value), .by = c("scenario", "hector.units", "scenario", "year", "hector.name")) %>%
+        select(scenario, year, value, variable = hector.name, units = hector.units) %>%
+        # The future emissions start after the transition date.
+        filter(year > TRANSITION_DATE) ->
+        incomplete_future_emiss
+
+
+    # Get the historical emissions aka the emissions Hector should
+    # use before switching over to the GCAM emissions. This should be
+    # the same for all the scenarios.
+    get_pregcam_emiss(file = gcam_emiss_file) %>%
+        filter(year <= TRANSITION_DATE) %>%
+        repeat_for_scns(scns = unique(incomplete_future_emiss$scenario)) %>%
+        as.data.frame ->
+        pre_gcam_emiss
+
+    # Complete the emissions
+    incomplete_future_emiss %>%
+        dplyr::bind_rows(pre_gcam_emiss) %>%
+        # Make sure the CO2 variables are not included here.
+        filter(!variable %in% c(FFI_EMISSIONS(), LUC_UPTAKE(), DACCS_UPTAKE(), LUC_EMISSIONS())) %>%
+        add_missing_years(yrs = 1750:2100) ->
+        out
+
+    return(out)
+}
+
+
+# A helper function that transforms the possibly negative emissions to the
+# emissions and uptake variables required by Hector.
+# Args
+#   df: long data frame of the luc and ffi emissions
+# Returns: long data frame of the luc & ffi emissions and uptake, strictly positive.
+internal_fxn_co2_processing <- function(df){
+    # Make sure that the required columns are included in the df
+    req_cols <- c("year", "value", "variable", "units", "scenario")
+    missing  <- setdiff(req_cols, names(df))
+    stopifnot(length(missing) == 0)
+
+    # Make sure the required variables are here and no more.
+    req_cols <- c(LUC_EMISSIONS(), FFI_EMISSIONS())
+    missing  <- setdiff(unique(df$variable), req_cols)
+    stopifnot(length(missing) == 0)
+
+    df %>%
+        tidyr::pivot_wider(names_from = variable, values_from = value) %>%
+        # Move the "negative emissions" to the uptake variables.
+        mutate(daccs_uptake = ifelse(ffi_emissions <= 0, -1 * ffi_emissions, 0),
+               luc_uptake = ifelse(luc_emissions <= 0, -1 * luc_emissions, 0)) %>%
+        # Now replace the "negative emissions" with the 0 value.
+        mutate(ffi_emissions = ifelse(ffi_emissions <= 0, 0, ffi_emissions),
+               luc_emissions = ifelse(luc_emissions <= 0, 0, luc_emissions)) %>%
+        tidyr::pivot_longer(cols = 4:7, names_to = "variable", values_to = "value") ->
+        out
+
+    return(out)
+}
+
+
+# Internal function that extracts the co2 emissions and prepares them
+# from an GCAM XML DB.
+# Args
+#   prjdata: path to the GCAM output file
+#   gcam_emiss_file: path to the gcam emissions table
+# Returns: data frame of the CO2 emissions and uptake from FFI/LUC for Hector
+internal_fxn_co2_emissions <- function(prjdata, gcam_emiss_file = GCAM_EMISS_FILE){
+
+    # Extract the two CO2 queries!
+    query <- "CO2 emissions by region"
+    ffi   <- getQuery(prjdata, query = query)
+
+    # Get the fug CO2 emissions
+    # TODO this should be addressed at the query level
+    getQuery(prjdata, query = "nonCO2 emissions by region") %>%
+        filter(ghg == "CO2_FUG") %>%
+        mutate(ghg = "CO2") %>%
+        bind_rows(ffi) %>%
+        summarise(value = sum(value), .by = c("Units", "scenario", "ghg", "year")) ->
+        ffi
+
+    query <- "luc_emissions"
+    luc   <- getQuery(prjdata, query = query)
+    luc$variable <- query
+    luc$ghg <- query
+
+
+    # Map the GCAM emissions to Hector variable names and
+    # convert to Hector units.
+    ffi %>%
+        bind_rows(luc) %>%
+        left_join(EMISS_MAP, by = join_by(ghg)) %>%
+        mutate(value = value * unit.conv) %>%
+        dplyr::summarise(value = sum(value),
+                         .by = c("scenario", "hector.units", "scenario", "year", "hector.name")) %>%
+        select(scenario, year, value, variable = hector.name, units = hector.units) %>%
+        # The future emissions start after the transition date.
+        filter(year > TRANSITION_DATE) ->
+        df
+
+
+    # Use the FFI and LUC emissions from GCAM to determine
+    # co2 emissions and uptake.
+    internal_fxn_co2_processing(df = df) ->
+        incomplete_future_emiss
+
+
+    # Get the historical emissions aka the emissions Hector should
+    # use before switching over to the GCAM emissions.
+    get_pregcam_emiss(file = gcam_emiss_file) %>%
+        filter(year <= TRANSITION_DATE) %>%
+        filter(variable %in% c(LUC_EMISSIONS(), LUC_UPTAKE(),
+                               FFI_EMISSIONS(), DACCS_UPTAKE())) %>%
+        repeat_for_scns(scns = unique(incomplete_future_emiss$scenario)) ->
+        pre_gcam_emiss
+
+    # Combine the pre
+    pre_gcam_emiss %>%
+        rbind(incomplete_future_emiss) %>%
+        split(., interaction(.$variable, .$scenario)) %>%
+        lapply(internal_fxn_missing_yrs, req_years = 1750:2100) %>%
+        do.call(what = "rbind") ->
+        out
+
     return(out)
 }
 
 
 
+get_hector_emiss <- function(db_dir, db_name,
+                              query_file = QUERY_FILE,
+                              prj_file = NULL,
+                              gcam_emiss_file = GCAM_EMISS_FILE,
+                              gcam_default_file = DEFAULT_EMISS_FILE){
 
-use_gcam_emissions <- function(ini_path,
-                               emissions_df,
-                               out_yrs = 1850:2100,
-                               out_vars = c(GLOBAL_TAS(), RF_TOTAL(), CONCENTRATIONS_CO2())){
+    # Run all the queries and save as an rgcam data object. If there
+    # is already a .dat file that exists load the existing one...
+    prj_file <- run_all_queries(db_dir = db_dir,
+                                db_name = db_name,
+                                query_file = query_file,
+                                prj_file = prj_file)
 
-    # There should only be one scenario per emissions data frame.
-    scn <- unique(emissions_df$scenario)
-    assert_that(length(scn) == 1)
-    stopifnot(file.exists(ini_path))
-
-    # Set up the Hector core
-    hc <- newcore(ini_path, name = scn)
+    message(paste0("GCAM data set saved at: ", prj_file))
 
 
-    # Pass all of the emissions to the Hector core.
-    split(emissions_df, emissions_df$variable) %>%
-        lapply(function(d){
+    # Load the project file
+    prjdata <- rgcam::loadProject(prj_file)
 
-            setvar(core = hc,
-                   dates = d$year,
-                   var = d$variable,
-                   values = d$value,
-                   unit = d$units)
-            reset(hc)
+    # Get emissions from the GCAM XML output database.
+    nonCO2_emiss <- internal_fxn_nonCO2_emissions(prjdata, gcam_emiss_file)
+    CO2_emiss    <- internal_fxn_co2_emissions(prjdata, gcam_emiss_file)
 
-        })
+    # Get the default emissions/RF inputs associated
+    # with the GCAM run.
+    get_default_emiss(gcam_default_file) %>%
+        repeat_for_scns(scns = unique(CO2_emiss$scenario)) ->
+        default_emiss
 
-    run(hc, runtodate = 2100)
-    out <- fetchvars(core = hc, dates = out_yrs, vars = out_vars)
+    # Return the output!
+    dplyr::bind_rows(default_emiss,
+                     nonCO2_emiss,
+                     CO2_emiss) %>%
+        data.frame(row.names = NULL) %>%
+        mutate(source = "GCAM-hector") ->
+        out
+
     return(out)
 
 }
+

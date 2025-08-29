@@ -25,8 +25,6 @@ BASE_DIR <- here::here()
 
 theme_set(theme_bw())
 
-# 1. Import mapping file ---------------------------------------------------------------
-emissions_map <- as.data.table(read.csv(file.path(BASE_DIR, "GCAM_hector_emissions_map.csv")))
 
 # 2. Extract data from a GCAM  output database -----------------------------------------
 
@@ -34,21 +32,16 @@ emissions_map <- as.data.table(read.csv(file.path(BASE_DIR, "GCAM_hector_emissio
 # TODO might want to make this more general
 #conn  <- localDBConn('/Users/dorh012/projects/GCAM/gcam-core/output', 'database_basexdb')
 
-conn <- localDBConn(here::here("databases"), "database_basexdbGCAM_SSP1")
+db_dir <- here::here("gcam_output")
+db_name <- "database_basexdb"
+query_file <- here::here("auxiliary_data", "hector-queries.xml")
 
-# TODO this is missing queries for LUC & some other CO2 emissions & uptake but these need to be added
-# to GCAM.
-queryFile <- here::here("hector-emissions-queries.xml")
+prjfile <- run_all_quries(db_dir = db_dir, db_name = db_name, query_file = query_file)
 
 
-# Run queries on all of the scenarios listed in the GCAM xml database
-# then load the gcam results and extract the scenario name.
-# TODO instead of writing out to disk pass in memory?
-lapply(X = listScenariosInDB(conn)$name, function(name){
-  print(name)
-  gcam_data <- addScenario(conn = conn, proj = 'gcam_db.dat', scenario = name, queryFile = queryFile)
-  return(invisible())
-})
+
+
+
 
 
 
@@ -62,68 +55,83 @@ lapply(X = listScenariosInDB(conn)$name, function(name){
 # function
 get_hector_emissions <- function(dat_file){
 
-  # Check that the gcam data file actually exists
-  assert_that(file.exists(dat_file))
-  # TODO is there some check to make sure that this a rgcam product?
-  gcam_rslts <- loadProject(dat_file)
+    # Checks
+    assert_that(file.exists(dat_file))
+    gcam_rslts <- loadProject(dat_file)
+    stopifnot(class(gcam_rslts) == "list")
 
-  # Format gcam results into a data frame
-  lapply(names(gcam_rslts), function(x){
-    gcam_df <- rbindlist(list(gcam_rslts[[x]]$`CO2 emissions by region`,
-                              gcam_rslts[[x]]$`nonCO2 emissions by region`), fill = TRUE)
-    return(gcam_df)
-  }) %>%
-    rbindlist ->
-    gcam_df
+    # TODO this will need to change during the package implementation
+    mapping_df <- read.csv("auxiliary_data/GCAM_hector_emissions_map.csv")
 
-  # Add the mapping information to the data frame
-  gcam_emissions_map <- emissions_map[gcam_df, on = "ghg"]
+    scns <- names(gcam_rslts)
 
-  # Check to make sure that the un-mapped emissions are the ones we are expecting.
-  no_matches <- unique(gcam_emissions_map[is.na(gcam_emissions_map$agg.gas), ]$ghg)
-  expected_emissions <- c("H2", "H2_AWB", "PM10", "PM2.5")
-  assert_that(all(no_matches %in% expected_emissions), msg = "unexpected emission not being passed to Hector")
+    # Emission queries
+    getQuery(projData = gcam_rslts, query = "CO2 emissions by region") %>%
+        summarise(value = sum(value), .by = c("scenario", "year", "ghg", "Units")) ->
+        co2_gcam_emissions
 
-  # First convert from GCAM units to Hector units, this is important for some of the halocarbons, mulitple GCAM
-  # halocarbons may be aggregated into one Hector halocarbon category.
-  gcam_emissions_map$converted_value <- gcam_emissions_map[ , list(value * unit.conv)]
-  gcam_inputs_for_hector <- gcam_emissions_map[ , list(value = sum(converted_value)), by = c("agg.gas", "hector.name", "scenario", "year",  "hector.units")]
+    getQuery(projData = gcam_rslts, query = "nonCO2 emissions by region") %>%
+        summarise(value = sum(value), .by = c("scenario", "year", "ghg", "Units")) ->
+        non_co2_gcam_emissions
 
-  # Drop the exepcted NAs
-  d <- na.omit(gcam_inputs_for_hector)
-
-  # error checking
-  req_cols <- c("year", "value")
-  assert_that(all(req_cols %in% names(d)))
+    co2_gcam_emissions %>%
+        rbind(non_co2_gcam_emissions) ->
+        gcam_industry_emiss
 
 
-  # The expecgted years of data we want are from 2005 until 2100, before the year
-  # 2005 Hector is using the GCAM inputs
-  expected_years <- data.table(year = 2005:2100)
+    gcam_industry_emiss %>%
+        left_join(mapping_df, by = join_by(ghg)) ->
+        mapped_gcam_industry_emiss
 
-  # Construct a df of all the variables for all the 2005 until 2100. This will
-  # create a df with NA values when no GCAM emissions are available that will be
-  # fill in the next step.
-  save_cols <- names(d)[!names(d) %in% c("year", "value")]
-  to_replicate <- distinct(d[, ..save_cols])
-  df_with_all_yrs <- repeat_add_columns(x = to_replicate, y = expected_years)
-  df_NA <- d[df_with_all_yrs,  on=names(df_with_all_yrs), nomatch = NA]
+    # Check to make sure that the un-mapped emissions are the ones we are expecting.
+    no_matches <- unique(mapped_gcam_industry_emiss[is.na(mapped_gcam_industry_emiss$agg.gas), ]$ghg)
+    expected_missing_emissions <- c("H2", "H2_AWB", "PM10", "PM2.5")
+    assert_that(all(no_matches %in% expected_missing_emissions), msg = "unexpected emission not being passed to Hector")
 
-  # Replace the NA emissions with linearlly interpolated values.
-  split(x = df_NA,
-        f = interaction(df_NA$hector.name, df_NA$scenario, df_NA$hector.units, drop = TRUE)) %>%
-    lapply(function(X){
-      new_vals <- na.approx(object = X$value, x = X$year)
-      X$value <- new_vals
-      return(X)
-    }) %>%
-    rbindlist ->
-    complete_hetor_emissions
+    # Convert to the appropriate Hector units before aggregating to Hector variables.
+    mapped_gcam_industry_emiss %>%
+        filter(!ghg %in% expected_missing_emissions) %>%
+        mutate(value = value * unit.conv) %>%
+        summarise(value = sum(value), .by =  c("agg.gas", "hector.name", "scenario", "year",  "hector.units")) ->
+        gcam_industry_emiss_4_hector
 
 
-  # Finally format the data
-  out <- complete_hetor_emissions[, .(scenario,variable = hector.name, year, value, units = hector.units)]
-  return(out)
+    # If NAs are propping up there is a possible mapping problem occurring!
+    stopifnot(sum(is.na(gcam_industry_emiss_4_hector))==0)
+
+
+    # error checking
+    req_cols <- c("year", "value")
+    assert_that(all(req_cols %in% names(d)))
+
+
+    # The expecgted years of data we want are from 2005 until 2100, before the year
+    # 2005 Hector is using the GCAM inputs
+    expected_years <- data.table(year = 2005:2100)
+
+    # Construct a df of all the variables for all the 2005 until 2100. This will
+    # create a df with NA values when no GCAM emissions are available that will be
+    # fill in the next step.
+    save_cols <- names(d)[!names(d) %in% c("year", "value")]
+    to_replicate <- distinct(d[, ..save_cols])
+    df_with_all_yrs <- repeat_add_columns(x = to_replicate, y = expected_years)
+    df_NA <- d[df_with_all_yrs,  on=names(df_with_all_yrs), nomatch = NA]
+
+    # Replace the NA emissions with linearlly interpolated values.
+    split(x = df_NA,
+          f = interaction(df_NA$hector.name, df_NA$scenario, df_NA$hector.units, drop = TRUE)) %>%
+        lapply(function(X){
+            new_vals <- na.approx(object = X$value, x = X$year)
+            X$value <- new_vals
+            return(X)
+        }) %>%
+        rbindlist ->
+        complete_hetor_emissions
+
+
+    # Finally format the data
+    out <- complete_hetor_emissions[, .(scenario,variable = hector.name, year, value, units = hector.units)]
+    return(out)
 }
 
 
@@ -133,27 +141,27 @@ get_hector_emissions <- function(dat_file){
 # Return: data table of Hector temp and rf values
 get_hector_comparison_data <- function(dat_file){
 
-  assert_that(file.exists(dat_file))
-  # TODO is there some check to make sure that this a rgcam product?
-  gcam_rslts <- loadProject(dat_file)
+    assert_that(file.exists(dat_file))
+    # TODO is there some check to make sure that this a rgcam product?
+    gcam_rslts <- loadProject(dat_file)
 
-  # Format gcam results into a data frame
-  lapply(names(gcam_rslts), function(x){
+    # Format gcam results into a data frame
+    lapply(names(gcam_rslts), function(x){
 
-    tas <- gcam_rslts[[x]]$`Climate forcing`
-    tas$variable <- GLOBAL_TAS()
-    rf_tot <- gcam_rslts[[x]]$`Climate forcing`
-    rf_tot$variable <- RF_TOTAL()
-    co2_con <- gcam_rslts[[x]]$`CO2 concentrations`
-    co2_con$variable <- CONCENTRATIONS_CO2()
+        tas <- gcam_rslts[[x]]$`Climate forcing`
+        tas$variable <- GLOBAL_TAS()
+        rf_tot <- gcam_rslts[[x]]$`Climate forcing`
+        rf_tot$variable <- RF_TOTAL()
+        co2_con <- gcam_rslts[[x]]$`CO2 concentrations`
+        co2_con$variable <- CONCENTRATIONS_CO2()
 
-    gcam_df <- rbind(tas, rf_tot, co2_con)
+        gcam_df <- rbind(tas, rf_tot, co2_con)
+        return(gcam_df)
+    }) %>%
+        rbindlist ->
+        gcam_df
+
     return(gcam_df)
-  }) %>%
-    rbindlist ->
-    gcam_df
-
-  return(gcam_df)
 
 }
 
@@ -166,41 +174,41 @@ hector_comparison <- get_hector_comparison_data(dat_file)
 
 # 4. Run Hector with the GCAM set up & emissions! -----------------------------------------
 use_gcam_emissions <- function(ini_path, emissions_df,
-                              out_vars = c(GLOBAL_TAS(), RF_TOTAL(), CONCENTRATIONS_CO2())){
+                               out_vars = c(GLOBAL_TAS(), RF_TOTAL(), CONCENTRATIONS_CO2())){
 
-  # There should only be one scenario per emissions data frame.
-  assert_that(length(unique(emissions_df$scenario)) == 1)
-  # TODO check to make sure that all the required emissions are included?
-  # TODO add a check that makes sure all the required columns are included in emissions_df?
+    # There should only be one scenario per emissions data frame.
+    assert_that(length(unique(emissions_df$scenario)) == 1)
+    # TODO check to make sure that all the required emissions are included?
+    # TODO add a check that makes sure all the required columns are included in emissions_df?
 
-  # Set up the Hector core
-  hc <- newcore(ini_path, name = unique(emissions_df$scenario))
-  setvar(core = hc, dates = emissions_df$year, var = emissions_df$variable, values = emissions_df$value, unit = emissions_df$units)
-  reset(hc)
+    # Set up the Hector core
+    hc <- newcore(ini_path, name = unique(emissions_df$scenario))
+    setvar(core = hc, dates = emissions_df$year, var = emissions_df$variable, values = emissions_df$value, unit = emissions_df$units)
+    reset(hc)
 
-  # TODO this should be dropped when the dacccs & luc stuff is implemented in GCAM & in the query, wait why the fuck is this throwing
-  # a Hector error!
-  luc_emissions <- data.frame(year = unique(emissions_df$year),
-                              var = LUC_EMISSIONS(),
-                              values = .5,
-                              unit = getunits(FFI_EMISSIONS()))
-  setvar(core = hc, dates = 2005:2100, var = luc_emissions$var, values = 10, unit = getunits(FFI_EMISSIONS()))
-  reset(hc)
+    # TODO this should be dropped when the dacccs & luc stuff is implemented in GCAM & in the query, wait why the fuck is this throwing
+    # a Hector error!
+    luc_emissions <- data.frame(year = unique(emissions_df$year),
+                                var = LUC_EMISSIONS(),
+                                values = .5,
+                                unit = getunits(FFI_EMISSIONS()))
+    setvar(core = hc, dates = 2005:2100, var = luc_emissions$var, values = 10, unit = getunits(FFI_EMISSIONS()))
+    reset(hc)
 
-  luc_uptake <- data.frame(year = 2005:2100,
-                              var = LUC_UPTAKE(),
-                              values = 0,
-                              unit = getunits(FFI_EMISSIONS()))
-  setvar(hc, luc_uptake$year, LUC_UPTAKE(), 0, getunits(FFI_EMISSIONS()))
-  reset(hc)
+    luc_uptake <- data.frame(year = 2005:2100,
+                             var = LUC_UPTAKE(),
+                             values = 0,
+                             unit = getunits(FFI_EMISSIONS()))
+    setvar(hc, luc_uptake$year, LUC_UPTAKE(), 0, getunits(FFI_EMISSIONS()))
+    reset(hc)
 
-  # why the fuck is this still not running???
-  reset(hc)
-  run(hc, runtodate = 2050)
-  out <- fetchvars(core = hc, dates = 1900:2050, vars = out_vars)
-  return(out)
+    # why the fuck is this still not running???
+    reset(hc)
+    run(hc, runtodate = 2050)
+    out <- fetchvars(core = hc, dates = 1900:2050, vars = out_vars)
+    return(out)
 
-  }
+}
 
 
 hector_gcam_driven <- use_gcam_emissions(ini_path = "~/projects/GCAM/gcam-core/input/climate/hector-gcam.ini",
@@ -213,26 +221,26 @@ hector_gcam_driven <- use_gcam_emissions(ini_path = "~/projects/GCAM/gcam-core/i
 
 
 read.csv("~/projects/GCAM/gcam-core/exe/logs/gcam-hector-outputstream.csv", skip = 1) %>%
-  filter(spinup == 0) %>%
-  filter(variable %in% c(GLOBAL_TAS(), CONCENTRATIONS_CO2(), RF_TOTAL())) ->
-  gcamhector_outputstream
+    filter(spinup == 0) %>%
+    filter(variable %in% c(GLOBAL_TAS(), CONCENTRATIONS_CO2(), RF_TOTAL())) ->
+    gcamhector_outputstream
 
 
 hector_comparison %>%
-  mutate(source =  "GCAM") %>%
-  mutate(value = if_else(variable == CONCENTRATIONS_CO2(), value / 2.130234, value)) ->
-  hector_comparison
+    mutate(source =  "GCAM") %>%
+    mutate(value = if_else(variable == CONCENTRATIONS_CO2(), value / 2.130234, value)) ->
+    hector_comparison
 hector_comparison$source  <- "GCAM"
 hector_gcam_driven$source <- "GCAM driven"
 gcamhector_outputstream$source <- "gcacm hector outputstream"
 
 comparison_results <- rbindlist(list(gcamhector_outputstream, hector_gcam_driven, hector_comparison), fill = TRUE) %>%
-  mutate(year = as.integer(year)) %>%
-  filter(year <= 2100 & year >= 1900)
+    mutate(year = as.integer(year)) %>%
+    filter(year <= 2100 & year >= 1900)
 
 comparison_results %>%
-  ggplot(aes(year, value, color = source, linetype = source)) +
-  geom_line(size = 1) +
-  facet_wrap("variable", scales = "free") +
-  theme(legend.position = "bottom")
+    ggplot(aes(year, value, color = source, linetype = source)) +
+    geom_line(size = 1) +
+    facet_wrap("variable", scales = "free") +
+    theme(legend.position = "bottom")
 
