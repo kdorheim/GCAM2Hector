@@ -77,6 +77,71 @@ read_hector_csv <- function(file){
 
 }
 
+#' Add missing years of data for a single scenario
+#'
+#' Used inside \code{\link{add_missing_yrs}} this function adds extra
+#' years of data to a data frame, uses linear interpolation to fill in
+#' years between points.
+#'
+#' @param df data frame that does not have entries of required years
+#' @param req_years vector of all the years that are expected in the df
+#' @return data frame with entries for all the years listed in req_years
+#' @noRd
+internal.add_missing_yrs_1scn <- function(df, req_years){
+
+    # Save a copy of the meta data
+    meta_names <- setdiff(names(df), c("year", "value"))
+    meta_data <- unique(df[meta_names])
+    missing_yrs_df <- cbind(data.frame(year = setdiff(req_years, df$year),
+                                 value = NA),
+                            meta_data, row.names = NULL)
+
+
+    # This df contains the original values and NA entries
+    # for the years of data that was missing in the original df.
+    df2 <- rbind(missing_yrs_df, df, row.names = NULL)
+
+    # Arrange by year and then use linear interpolation
+    # to replace NA values.
+    df2 <- df2[order(df2$year), ]
+    df2$value <- approx(x = df2$year, y = df2$value, xout = df2$year)$y
+
+    return(df2)
+
+}
+
+#' Add missing years of data for mulitple scenarios
+#'
+#'
+#' @param df data frame that does not have entries of required years
+#' @param req_years vector of all the years that are expected in the df
+#' @return data frame with entries for all the years listed in req_years
+#' @noRd
+add_missing_yrs <- function(df, req_years){
+
+    req_cols <- c("year", "value", "scenario")
+    req_check(names(df), req_cols)
+
+    split(df, df$scenario) %>%
+        lapply(internal.add_missing_yrs_1scn, req_years = req_years)
+
+
+    out_list <- lapply(X = split(df, df$scenario), FUN = internal.add_missing_yrs_1scn, req_years = req_years)
+    out <- do.call(rbind, out_list)
+    row.names(out) <- NULL
+    return(out)
+
+}
+
+
+
+
+
+
+
+
+
+
 
 
 

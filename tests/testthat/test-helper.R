@@ -37,3 +37,42 @@ test_that("read_hector_csv works", {
 
 })
 
+test_that("add_missing_yrs works", {
+
+    # Make first example data
+    req_years <- 2005:2050
+    year <- floor(seq(from = min(req_years), to = max(req_years), length.out = 10))
+    value <- (10 * year + 2) + rnorm(length(year), mean = 0, sd = 100)
+    datx <- data.frame(year, value, scenario = "x")
+
+    # Make data for a second scenario
+    daty <- datx
+    daty$scenario <- "y"
+    daty$value <- (10 * year + 2) + rnorm(length(year), mean = 0, sd = 50)
+
+    # Example data frame with two scenarios
+    datxy <- rbind(datx, daty)
+
+
+    # The internal function should work when passed only 1 scenario.
+    out1 <- internal.add_missing_yrs_1scn(datx, req_years)
+    expect_equal(nrow(out1), length(req_years))
+
+    # When the internal function is fed data for multiple scenarios
+    # the function should run but it will return different and we should
+    # get some sort of warning.
+    expect_warning(out2 <- internal.add_missing_yrs_1scn(datxy, req_years))
+
+    # The internal function should work when passed only 1 scenario and
+    # should return the same data as the single call.
+    out3 <- add_missing_yrs(datx, req_years)
+    expect_equal(out1$value, out3$value)
+
+    out4 <- add_missing_yrs(datxy, req_years)
+    expect_equal(nrow(out4), length(req_years) * 2)
+
+
+})
+
+
+
