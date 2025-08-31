@@ -6,8 +6,8 @@ if(basename(getwd()) == "testthat") {
 } else {
     base_dir <- file.path("tests", "testthat")
 }
-
-prj_data <- loadProject(file.path(base_dir, "gcam_db.dat"))
+prj_file <- file.path(base_dir, "gcam_db.dat")
+prj_data <- loadProject(prj_file)
 
 
 test_that("get_pregcam_emiss works", {
@@ -100,7 +100,6 @@ test_that("handle_neg_CO2_emiss", {
 
 test_that("get_CO2_emiss", {
 
-
     out1 <- get_CO2_emiss(prj_data)
     expect_true(req_check(out1$year, 1745:2100))
 
@@ -108,3 +107,28 @@ test_that("get_CO2_emiss", {
     expect_true(req_check(out1$variable, co2_emiss))
 
 })
+
+
+test_that("get_hector_inputs", {
+
+    db_dir = "."
+    db_name = "fake"
+
+    # Get the hector inputs
+    suppressMessages({ out <- get_hector_inputs(db_dir, db_name, prj_file = prj_file)})
+
+    # Check to make sure that we are not missing years for any
+    # of the variables.
+    split(out, interaction(out$variable, out$scenario)) %>%
+        sapply(function(x){
+            req_check(x$year, 1750:2100)
+        }, simplify = TRUE) ->
+        yrs_check
+    expect_true(all(yrs_check))
+
+    # Make sure all inputs are included here
+    all_inputs <- c(DEFAULT_EMISS, GCAM_EMISS)
+    expect_true(req_check(x = out$variable, req = all_inputs))
+})
+
+

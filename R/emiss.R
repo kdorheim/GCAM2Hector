@@ -100,10 +100,6 @@ get_nonCO2_emiss <- function(prjdata, gcam_emiss_file = NULL){
     return(out)
 }
 
-# TODO delte this but this may be helpful during dev and testing...
-# write.csv(df, "neg_co2_emiss.csv", row.names = FALSE)
-# df <- read.csv("neg_co2_emiss.csv")
-
 
 #' Change net CO2 emissions to strictly positive emissions and uptake
 #'
@@ -204,5 +200,77 @@ get_CO2_emiss <- function(prjdata, gcam_emiss_file = NULL){
 
 }
 
+
+
+#' Prepare hector inputs from a GCAM xml output db
+#'
+#' @param db_dir str directory where the GCAM database to be processed lives
+#' @param db_name str name of the GCAM XML db
+#' @param query_file str to the query file to run, default is set to internal data
+#' @param prj_file str name where to save the rgcam project data at, if NULL will save to a temporary location
+#' @param gcam_emiss_file str path to the hector gcam emissions csv table, default is set to internal data
+#' @param gcam_default_file str path to the hector default emissions csv table, default is set to internal data
+#' @returns data frame of Hector inputs
+#' @import dplyr
+#' @import hector
+#' @export
+#' @examples
+#' \donotrun{
+#'
+#' # Get the inputs for Hector using GCAM emissions during the
+#' future period.
+#' inputs <- get_hector_inputs(db_dir = "gcam_output",
+#'                            db_name = "database_basexdb",
+#'                            prj_file = "gcam_db.dat")
+#' head(inputs)
+#'
+#' # The data frame returned can be used be used in
+#' }
+get_hector_inputs <- function(db_dir, db_name,
+                              query_file = NULL,
+                              prj_file = NULL,
+                              gcam_emiss_file = NULL,
+                              gcam_default_file = NULL){
+
+
+    if(is.null(query_file)){
+        query_file <- system.file("extdata", "hector-queries.xml", package = "GCAM2Hector")
+    }
+
+    # Run all the queries and save as an rgcam data object. If there
+    # is already a .dat file that exists load the existing one...
+    prj_file <- get_all_queries(db_dir = db_dir,
+                                db_name = db_name,
+                                query_file = query_file,
+                                prj_file = prj_file)
+
+    message(paste0("GCAM data set saved at: ", prj_file))
+
+    # Load the project file
+    prjdata <- rgcam::loadProject(prj_file)
+
+
+    # Get emissions from the GCAM XML output database.
+    nonCO2_emiss <- get_nonCO2_emiss(prjdata, gcam_emiss_file)
+    CO2_emiss    <- get_CO2_emiss(prjdata, gcam_emiss_file)
+
+
+    # Get the default emissions/RF inputs associated
+    # with the GCAM run.
+    get_default_emiss(gcam_default_file) %>%
+        repeat_for_scns(scns = unique(CO2_emiss$scenario)) ->
+        default_emiss
+
+    # Return the output!
+    dplyr::bind_rows(default_emiss,
+                     nonCO2_emiss,
+                     CO2_emiss) %>%
+        data.frame(row.names = NULL) %>%
+        mutate(source = "GCAM-hector",
+               db = db_name) ->
+        out
+
+    return(out)
+}
 
 
