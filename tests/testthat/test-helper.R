@@ -43,7 +43,7 @@ test_that("add_missing_yrs works", {
     req_years <- 2005:2050
     year <- floor(seq(from = min(req_years), to = max(req_years), length.out = 10))
     value <- (10 * year + 2) + rnorm(length(year), mean = 0, sd = 100)
-    datx <- data.frame(year, value, scenario = "x")
+    datx <- data.frame(year, value, scenario = "x", variable = "k")
 
     # Make data for a second scenario
     daty <- datx

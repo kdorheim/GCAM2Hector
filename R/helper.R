@@ -119,14 +119,10 @@ internal.add_missing_yrs_1scn <- function(df, req_years){
 #' @noRd
 add_missing_yrs <- function(df, req_years){
 
-    req_cols <- c("year", "value", "scenario")
+    req_cols <- c("year", "value", "scenario", "variable")
     req_check(names(df), req_cols)
 
-    split(df, df$scenario) %>%
-        lapply(internal.add_missing_yrs_1scn, req_years = req_years)
-
-
-    out_list <- lapply(X = split(df, df$scenario), FUN = internal.add_missing_yrs_1scn, req_years = req_years)
+    out_list <- lapply(X = split(df, interaction(df$scenario, df$variable)), FUN = internal.add_missing_yrs_1scn, req_years = req_years)
     out <- do.call(rbind, out_list)
     row.names(out) <- NULL
     return(out)

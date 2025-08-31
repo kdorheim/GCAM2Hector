@@ -32,3 +32,12 @@ PREGCAM_EMISS_DF <- emiss
 
 # Save the processed data to the data/ directory
 usethis::use_data(PREGCAM_EMISS_DF, overwrite = TRUE)
+
+
+
+# EMISS_MAP_DF -----------------------------------------------------------------
+# The mapping file to convert the GCAM emissions to the proper Hector input
+# name and units.
+EMISS_MAP_DF <- read.csv("data-raw/GCAM_hector_emissions_map.csv")
+# Save the processed data to the data/ directory
+usethis::use_data(EMISS_MAP_DF, overwrite = TRUE)
