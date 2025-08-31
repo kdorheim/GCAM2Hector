@@ -9,7 +9,7 @@ fetch_GCAM_vs_hector(prj_file, vars = NULL)
 \arguments{
 \item{prj_file}{path to the directory that contains the GCAM xml db created by \code{\link{get_all_queries}}.}
 
-\item{vars}{hector variables to save, if NULL will return a standard set of climate variables.}
+\item{vars}{hector variables to save, if NULL will return the CO2 concentrations, gmst, and a handful of radiative forcing results.}
 }
 \value{
 data frame of the GCAM-hector results
