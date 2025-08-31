@@ -1,6 +1,6 @@
 
 
-test_that("req_check works", {
+test_that("req_check", {
 
     # This should work on a data frame and the column.
     req <- c("mpg", "cyl", "disp", "hp", "drat", "wt")
@@ -15,7 +15,7 @@ test_that("req_check works", {
 
 })
 
-test_that("repeat_for_scns works", {
+test_that("repeat_for_scns", {
 
     scns <- c("fake1", "test2")
     out <- repeat_for_scns(x = mtcars, scns = scns)
@@ -37,7 +37,7 @@ test_that("read_hector_csv works", {
 
 })
 
-test_that("add_missing_yrs works", {
+test_that("add_missing_yrs", {
 
     # Make first example data
     req_years <- 2005:2050
@@ -73,6 +73,4 @@ test_that("add_missing_yrs works", {
 
 
 })
-
-
 

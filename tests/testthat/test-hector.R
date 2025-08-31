@@ -39,3 +39,25 @@ test_that("internal.single_hector_run", {
 })
 
 }
+
+# TODO there should be a better way to handle this!
+if(basename(getwd()) == "testthat") {
+    base_dir <- "."
+} else {
+    base_dir <- file.path("tests", "testthat")
+}
+prj_file <- file.path(base_dir, "gcam_db.dat")
+prj_data <- loadProject(prj_file)
+
+test_that("run_GCAM2hector", {
+
+    db_dir <- "fake_dir"
+    db_name <- "fake_basexdb"
+
+    out <- run_GCAM2hector(db_dir = db_dir,
+                           db_name = db_name,
+                           prj_file = prj_file)
+
+    expect_true(is.data.frame(out))
+
+})

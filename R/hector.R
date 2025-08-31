@@ -37,7 +37,38 @@ internal.single_hector_run <- function(hc, inputs, vars = NULL){
 }
 
 
+run_GCAM2hector <- function(db_dir, db_name,
+                            prj_file = NULL,
+                            ini = NULL,
+                            query_file = NULL,
+                            gcam_emiss_file = NULL,
+                            gcam_default_file = NULL,
+                            vars = NULL){
 
+    if(is.null(ini)){
+        ini <-  system.file("extdata", "hector-gcam.ini", package = "GCAM2Hector")
+    }
 
+    hc <- newcore(ini)
 
+    # Prep the emissions for Hector
+    inputs <- get_hector_inputs(db_dir,
+                                db_name,
+                                query_file,
+                                prj_file = prj_file)
+
+    # Feed the inputs into Hector and get results.
+    split(inputs, inputs$scenario) %>%
+        sapply(internal.single_hector_run,
+               hc = hc,
+               vars = vars,
+               simplify = FALSE, USE.NAMES = FALSE) %>%
+        do.call(what = "rbind") ->
+        hector_out
+
+    rownames(hector_out) <- NULL
+
+    return(hector_out)
+
+}
 

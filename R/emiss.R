@@ -244,7 +244,7 @@ get_hector_inputs <- function(db_dir, db_name,
                                 query_file = query_file,
                                 prj_file = prj_file)
 
-    message(paste0("GCAM data set saved at: ", prj_file))
+    #message(paste0("GCAM data set saved at: ", prj_file))
 
     # Load the project file
     prjdata <- rgcam::loadProject(prj_file)
