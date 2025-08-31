@@ -2,6 +2,7 @@
 
 export(fetch_GCAM_vs_hector)
 export(get_all_queries)
+export(get_hector_inputs)
 import(dplyr)
 import(hector)
 importFrom(tidyr,pivot_longer)
