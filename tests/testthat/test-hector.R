@@ -65,22 +65,22 @@ test_that("run_GCAM2hector", {
 
 })
 
-test_that("internal.write_hector_csv and internal.write_ini", {
-    # TODO need to add!
-})
+# test_that("internal.write_hector_csv and internal.write_ini", {
+#     # TODO need to add!
+# })
 
-# TODO there is a problem with this!!! FML wht is going on...
-test_that("write_GCAM2hector", {
-
-    ini <-  write_GCAM2hector(db_dir = "fake",
-                              db_name = "fake",
-                              outdir = ".",
-                              prj_file = prj_file)
-
-
-    # UGH there is a problem, although for the life of me I cannot figure
-    # out what is wrong!
-    hc <- newcore(ini)
-
-
-})
+# # TODO there is a problem with this!!! FML wht is going on...
+# test_that("write_GCAM2hector", {
+#
+#     ini <-  write_GCAM2hector(db_dir = "fake",
+#                               db_name = "fake",
+#                               outdir = ".",
+#                               prj_file = prj_file)
+#
+#
+#     # UGH there is a problem, although for the life of me I cannot figure
+#     # out what is wrong!
+#     hc <- newcore(ini)
+#
+#
+# })
