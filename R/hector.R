@@ -25,7 +25,7 @@ internal.single_hector_run <- function(hc, inputs, vars = NULL){
     if(is.null(vars)){
         vars <- c(CONCENTRATIONS_CO2(), RF_ACI(), RF_OC(), RF_H2O_STRAT(),
                   RF_O3_TROP(), RF_BC(), RF_SO2(), RF_NH3(), RF_N2O(), RF_CH4(),
-                  RF_CO2(), RF_TOTAL(), GMST())
+                  RF_CO2(), RF_TOTAL(), GMST(), CONCENTRATIONS_N2O(), CONCENTRATIONS_CH4())
     }
 
     fetchvars(hc, dates = 1750:2100, vars = vars) %>%
