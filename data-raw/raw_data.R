@@ -3,7 +3,8 @@ devtools::load_all()
 
 # DEFAULT_EMISS_DF -------------------------------------------------------------
 # The emissions/inputs that are going to be constant regardless of GCAM scenario
-emiss <- read_hector_csv("data-raw/default_emissions.csv")
+file  <-  system.file("extdata", "default_emissions.csv", package = "GCAM2Hector")
+emiss <- read_hector_csv(file)
 
 # There should be emissions up until the end of the century
 stopifnot(max(emiss$year) >= 2100)
@@ -19,7 +20,8 @@ usethis::use_data(DEFAULT_EMISS_DF, overwrite = TRUE)
 
 # PREGCAM_EMISS_DF -------------------------------------------------------------
 # The emissions/inputs that are fed into Hector until the transition date.
-emiss <- read_hector_csv("data-raw/gcam_emissions.csv")
+file  <-  system.file("extdata", "gcam_emissions.csv", package = "GCAM2Hector")
+emiss <- read_hector_csv(file)
 
 # There should be no emissions greater than the transition date.
 stopifnot(all(emiss$year <= TRANSITION_DATE))
