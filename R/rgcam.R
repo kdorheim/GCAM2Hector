@@ -62,7 +62,7 @@ fetch_GCAM_vs_hector <- function(prj_file, vars = NULL){
 
     queries <- c("CO2_concentration", "RF_aci", "RF_OC", "RF_H2O_strat",
                  "RF_O3_trop", "RF_BC", "RF_SO2", "RF_NH3", "RF_N2O", "FCH4",
-                 "RF_CO2", "RF_tot", "gmst")
+                 "RF_CO2", "RF_tot", "gmst", "CH4_concentration", "N2O_concentration")
     if(!is.null(vars)){
         # Make sure the vars selected are compatible with the supported queries.
         req_check(queries, vars)
@@ -88,6 +88,3 @@ fetch_GCAM_vs_hector <- function(prj_file, vars = NULL){
 
 
 }
-
-
-

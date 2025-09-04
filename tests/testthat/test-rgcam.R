@@ -7,9 +7,9 @@ if(FALSE){
         # There is probably a better way to do this but for now
         # let the code run with
         if(basename(getwd()) == "testthat") {
-            base_dir <- "."
+            base_dir <-  file.path("..", "..")
         } else {
-            base_dir <- file.path("..", "..")
+            base_dir <- "."
         }
 
         db_dir <- file.path(base_dir, "gcam_output")
