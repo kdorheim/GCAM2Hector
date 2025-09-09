@@ -52,7 +52,7 @@
         </ClimateQuery>
     </aQuery>
     -->
-    
+
     <aQuery>
         <all-regions/>
         <ClimateQuery title="RF_OC">
@@ -195,17 +195,7 @@
 
     <aQuery>
         <all-regions/>
-        <gdpQueryBuilder title="CO2 emissions by region">
-            <axis1 name="region">region</axis1>
-            <axis2 name="Year">emissions</axis2>
-            <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:)]//CO2/emissions/node()</xPath>
-            <comments/>
-        </gdpQueryBuilder>
-    </aQuery>
-
-    <aQuery>
-        <all-regions/>
-        <emissionsQueryBuilder title="nonCO2 emissions by region">
+        <emissionsQueryBuilder title="emissions by region">
             <axis1 name="GHG">GHG</axis1>
             <axis2 name="Year">emissions</axis2>
             <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:) or @type = 'resource' (:collapse:)](: / *[@type = 'subresource' (: collapse :)] :)//
@@ -223,7 +213,7 @@
           <comments/>
        </emissionsQueryBuilder>
     </aQuery>
-    
+
     <aQuery>
         <all-regions/>
         <query title="luc_emissions">
@@ -235,7 +225,7 @@
             <comments/>
         </query>
     </aQuery>
-    
+
     <aQuery>
         <all-regions />
         <query title="LUC_above_total">

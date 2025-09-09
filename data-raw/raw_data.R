@@ -21,7 +21,8 @@ usethis::use_data(DEFAULT_EMISS_DF, overwrite = TRUE)
 # PREGCAM_EMISS_DF -------------------------------------------------------------
 # The emissions/inputs that are fed into Hector until the transition date.
 file  <-  system.file("extdata", "gcam_emissions.csv", package = "GCAM2Hector")
-emiss <- read_hector_csv(file)
+emiss <- read_hector_csv(file) %>%
+    filter(year <= TRANSITION_DATE)
 
 # There should be no emissions greater than the transition date.
 stopifnot(all(emiss$year <= TRANSITION_DATE))
@@ -41,5 +42,14 @@ usethis::use_data(PREGCAM_EMISS_DF, overwrite = TRUE)
 # The mapping file to convert the GCAM emissions to the proper Hector input
 # name and units.
 EMISS_MAP_DF <- read.csv("data-raw/GCAM_hector_emissions_map.csv")
+
+EMISS_MAP_DF %>%
+    mutate(unit.conv = if_else(hector.name == EMISSIONS_N2O(), 1/1.571132, unit.conv)) ->
+    EMISS_MAP_DF
+
+
+
+
 # Save the processed data to the data/ directory
 usethis::use_data(EMISS_MAP_DF, overwrite = TRUE)
+
