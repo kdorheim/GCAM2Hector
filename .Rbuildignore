@@ -6,4 +6,8 @@
 ^data-raw$
 ^gcam_output$
 ^LICENSE\.md$
-scripts
+^scripts$
+^gcam_output-2005$
+^gcam_output-2002-old$
+^gcam_output-mix$
+^gcam_output-goodish$

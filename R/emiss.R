@@ -106,7 +106,7 @@ get_CO2_emiss <- function(prjdata, gcam_emiss_file = NULL){
     # Use the total antro emissions and the negative emissions to determine
     # FFI emissions and DACCS uptake for hector.
     getQuery(prjdata, query = "emissions by region") %>%
-        filter(ghg %in% c("CO2")) %>%
+        filter(ghg %in% c("CO2", "CO2_FUG")) %>%
         summarise(total = sum(value), .by = c(Units, scenario, region, year)) ->
         co2.tot
 

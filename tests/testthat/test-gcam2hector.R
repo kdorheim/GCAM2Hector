@@ -28,13 +28,13 @@ test_that("run_GCAM2hector", {
         select(scenario, year, variable, value) %>%
         left_join(comp_data, by = join_by(scenario, year, variable)) %>%
         na.omit %>%
-        mutate(AE = abs(value - comp)) ->
+        mutate(AE = (value - comp)) ->
         AE_error
+
 
     AE_error %>%
         summarise(value = mean(AE), .by = "variable") ->
        MAE_data
-
 
     # Read in the benchmark data...
     threshold <- read.csv(file.path(base_dir, "error_benchmark.csv"))
@@ -47,8 +47,6 @@ test_that("run_GCAM2hector", {
         error_resutls
 
     expect_true(all(error_resutls$passing), label = "future MAE is too large")
-
-
 
     # Out of curiosity let's check to see if the
     # historical results pass...

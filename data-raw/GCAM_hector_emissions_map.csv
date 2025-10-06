@@ -2,7 +2,8 @@ ghg,agg.gas,unit.conv,hector.name,hector.units
 luc_uptake,luc_uptake,1.00E-03,luc_uptake,Pg C/yr
 luc_emissions,luc_emissions,1.00E-03,luc_emissions,Pg C/yr
 daccs_uptake,daccs_uptake,1.00E-03,daccs_uptake,Pg C/yr
-ffi_emissions,ffi_emissions,1.00E-03,ffi_emissions,Pg C/yr
+CO2_FUG,ffi_emissions,1.00E-03,ffi_emissions,Pg C/yr
+CO2,ffi_emissions,1.00E-03,ffi_emissions,Pg C/yr
 CO2NetLandUse,CO2NetLandUse,1.00E-03,NBP_constrain,Pg C/yr
 CH4,CH4,1.00E+00,CH4_emissions,Tg CH4
 CH4_AGR,CH4,1.00E+00,CH4_emissions,Tg CH4

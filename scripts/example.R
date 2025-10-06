@@ -48,7 +48,7 @@ rbind(gcam_hector_rslts, out) %>%
     filter(year >= 1975) %>%
     mutate(AE = abs(`gcam xmldb` - `stand alone hector`)) %>%
     summarise(MAE = mean(AE), .by = c("variable", "scenario")) %>%
-    filter(variable == RF_SO2()) %>%
+ #   filter(variable == RF_SO2()) %>%
     filter(MAE >= zero)
 
 
