@@ -1,12 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <queries>
     <aQuery>
-
         <all-regions/>
         <ClimateQuery title="CO2_concentration">
             <axis1 name="CO2-concentration">none</axis1>
             <axis2 name="Year">CO2-concentration[@year]</axis2>
             <xPath buildList="true" dataName="CO2-concentration" group="false" sumAll="false">climate-model/CO2-concentration/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+
+
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="CH4_concentration">
+            <axis1 name="CH4-concentration">none</axis1>
+            <axis2 name="Year">CH4-concentration[@year]</axis2>
+            <xPath buildList="true" dataName="CH4-concentration" group="false" sumAll="false">climate-model/CH4-concentration/text()</xPath>
+            <comments/>
+        </ClimateQuery>
+    </aQuery>
+
+    <aQuery>
+        <all-regions/>
+        <ClimateQuery title="N2O_concentration">
+            <axis1 name="N2O-concentration">none</axis1>
+            <axis2 name="Year">N2O-concentration[@year]</axis2>
+            <xPath buildList="true" dataName="N2O-concentration" group="false" sumAll="false">climate-model/N2O-concentration/text()</xPath>
             <comments/>
         </ClimateQuery>
     </aQuery>
@@ -129,7 +149,7 @@
 
     <aQuery>
         <all-regions/>
-        <ClimateQuery title="FCH4">
+        <ClimateQuery title="RF_CH4">
             <axis1 name="forcing-CH4">none</axis1>
             <axis2 name="Year">forcing-CH4[@year]</axis2>
             <xPath buildList="true" dataName="forcing-CH4" group="false" sumAll="false">climate-model/forcing-CH4/text()</xPath>
@@ -175,23 +195,23 @@
 
     <aQuery>
         <all-regions/>
-        <gdpQueryBuilder title="CO2 emissions by region">
-            <axis1 name="region">region</axis1>
-            <axis2 name="Year">emissions</axis2>
-            <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:)]//CO2/emissions/node()</xPath>
-            <comments/>
-        </gdpQueryBuilder>
-    </aQuery>
-
-    <aQuery>
-        <all-regions/>
-        <emissionsQueryBuilder title="nonCO2 emissions by region">
+        <emissionsQueryBuilder title="emissions by region">
             <axis1 name="GHG">GHG</axis1>
             <axis2 name="Year">emissions</axis2>
             <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:) or @type = 'resource' (:collapse:)](: / *[@type = 'subresource' (: collapse :)] :)//
                 *[@type = 'GHG']/emissions/node()</xPath>
             <comments/>
         </emissionsQueryBuilder>
+    </aQuery>
+
+    <aQuery>
+  <all-regions/>
+       <emissionsQueryBuilder title="CO2_negative">
+          <axis1 name="region">region</axis1>
+          <axis2 name="Year">emissions</axis2>
+          <xPath buildList="true" dataName="emissions" group="false" sumAll="false">*[@type = 'sector' (:collapse:)]//CO2/emissions[child::node() &lt; 0]/node()</xPath>
+          <comments/>
+       </emissionsQueryBuilder>
     </aQuery>
 
     <aQuery>
@@ -205,5 +225,36 @@
             <comments/>
         </query>
     </aQuery>
+
+    <aQuery>
+        <all-regions />
+        <query title="LUC_above_total">
+  <axis1 name="region">region</axis1>
+  <axis2 name="Year">above-land-use-change-emission[@year]</axis2>
+  <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name='root' or @type='LandNode' (:collapse:)]//LandLeaf[true() or @type='LandLeaf' (: collapse :)]/land-carbon-densities/
+              above-land-use-change-emission[@year&gt;1970]/text()</xPath>
+  <comments/>
+</query>
+</aQuery>
+<aQuery>
+  <all-regions />
+  <query title="LUC_below_total">
+  <axis1 name="region">region</axis1>
+  <axis2 name="Year">below-land-use-change-emission[@year]</axis2>
+  <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name='root' or @type='LandNode' (:collapse:)]//LandLeaf[true() or @type='LandLeaf' (: collapse :)]/land-carbon-densities/
+              below-land-use-change-emission[@year&gt;1970]/text()</xPath>
+  <comments/>
+</query>
+</aQuery>
+<aQuery>
+  <all-regions />
+  <query title="LUC_above_post">
+  <axis1 name="region">region</axis1>
+  <axis2 name="Year">above-gross-positive-luc[@year]</axis2>
+  <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name='root' or @type='LandNode' (:collapse:)]//LandLeaf[true() or @type='LandLeaf' (: collapse :)]/land-carbon-densities/
+              above-gross-positive-luc[@year&gt;1970]/text()</xPath>
+  <comments/>
+</query>
+</aQuery>
 </queries>
 
