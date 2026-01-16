@@ -1,0 +1,8 @@
+^renv$
+^renv\.lock$
+^.*\.Rproj$
+^\.Rproj\.user$
+.DS_Store
+^data-raw$
+^gcam_output$
+^LICENSE\.md$
